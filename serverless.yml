@@ -28,9 +28,9 @@ custom:
               &MessageBody=$util.urlEncode($input.body)
         response:
           template:
-            success: '{ "ok": true, "message": "Message accepted" }'
-            clientError: '{ "ok": false, "message": "There is an error in your request" }'
-            serverError: '{ "ok": false, "message": "There was an error handling your request" }'
+            success: '{ "ok": true, "message": "Message accepted", "requestId": "$context.requestId" }'
+            clientError: '{ "ok": false, "message": "There is an error in your request", "requestId": "$context.requestId" }'
+            serverError: '{ "ok": false, "message": "There was an error handling your request", "requestId": "$context.requestId" }'
 
 functions:
   SQSWorker:
@@ -71,7 +71,7 @@ resources:
           gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
           gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
         ResponseTemplates:
-          application/json: '{ "ok": false, "message": "Message payload invalid" }'
+          application/json: '{ "ok": false, "message": "Message payload invalid", "requestId": "$context.requestId" }'
         ResponseType: BAD_REQUEST_BODY
         RestApiId: !Ref ApiGatewayRestApi
         StatusCode: 422
@@ -83,7 +83,7 @@ resources:
           gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
           gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
         ResponseTemplates:
-          application/json: '{ "ok": false, "message": "Content-Type not supported" }'
+          application/json: '{ "ok": false, "message": "Content-Type not supported", "requestId": "$context.requestId" }'
         ResponseType: UNSUPPORTED_MEDIA_TYPE
         RestApiId: !Ref ApiGatewayRestApi
         StatusCode: 415
