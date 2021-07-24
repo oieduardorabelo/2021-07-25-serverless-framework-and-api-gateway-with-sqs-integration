@@ -20,6 +20,12 @@ custom:
         method: post
         queueName: !GetAtt SQSQueueFormPost.QueueName
         cors: true
+        request:
+          template:
+            application/json: |-
+              #set ($body = $util.parseJson($input.body))
+              Action=SendMessage##
+              &MessageBody=$util.urlEncode($input.body)
         response:
           template:
             success: '{ "ok": true, "message": "Message accepted" }'
@@ -58,38 +64,26 @@ resources:
             application/json: !Ref ApiGatewayRestMethodModel
           RequestValidatorId: !Ref ApiGatewayRequestValidator
           
-    ApiGatewayGatewayResponseBadRequestBody:
+    GatewayResponseBadRequestBody:
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
         ResponseParameters:
           gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
           gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
         ResponseTemplates:
-          'application/json': '{ "ok": false, "message": "Message payload invalid" }'
+          application/json: '{ "ok": false, "message": "Message payload invalid" }'
         ResponseType: BAD_REQUEST_BODY
         RestApiId: !Ref ApiGatewayRestApi
         StatusCode: 422
         
-    ApiGatewayGatewayResponseResourceNotFound:
+    GatewayResponseUnsupportedMediaType:
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
         ResponseParameters:
           gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
           gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
         ResponseTemplates:
-          'application/json': '{ "ok": false, "message": "Resource not found" }'
-        ResponseType: RESOURCE_NOT_FOUND
+          application/json: '{ "ok": false, "message": "Content-Type not supported" }'
+        ResponseType: UNSUPPORTED_MEDIA_TYPE
         RestApiId: !Ref ApiGatewayRestApi
-        StatusCode: 404
-        
-    ApiGatewayGatewayResponseDefault5XX:
-      Type: AWS::ApiGateway::GatewayResponse
-      Properties:
-        ResponseParameters:
-          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
-        ResponseTemplates:
-          'application/json': '{ "ok": false, "message": "Resource not supported" }'
-        ResponseType: DEFAULT_5XX
-        RestApiId: !Ref ApiGatewayRestApi
-        StatusCode: 500
+        StatusCode: 415
