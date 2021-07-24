@@ -1,0 +1,95 @@
+service: apigateway-sqs-dynamodb-html-form
+
+frameworkVersion: 2.52.1
+
+plugins:
+  - serverless-esbuild
+  - serverless-apigateway-service-proxy
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  lambdaHashingVersion: 20201221
+  stage: dev
+  region: ap-southeast-2
+
+custom:
+  apiGatewayServiceProxies:
+    - sqs:
+        path: /form
+        method: post
+        queueName: !GetAtt SQSQueueFormPost.QueueName
+        cors: true
+        response:
+          template:
+            success: '{ "ok": true, "message": "Message accepted" }'
+            clientError: '{ "ok": false, "message": "There is an error in your request" }'
+            serverError: '{ "ok": false, "message": "There was an error handling your request" }'
+
+functions:
+  SQSWorker:
+    handler: ./handlers/sqs-worker.handler
+
+resources:
+  Resources:
+    SQSQueueFormPost:
+      Type: 'AWS::SQS::Queue'
+    
+    ApiGatewayRestMethodModel:
+        Type: AWS::ApiGateway::Model
+        Properties:
+          ContentType: application/json
+          Description: "FormPostModel"
+          RestApiId: !Ref ApiGatewayRestApi
+          Schema: ${file(./apigateway-schemas/form-post.json)}
+    
+    ApiGatewayRequestValidator:
+        Type: AWS::ApiGateway::RequestValidator
+        Properties:
+          Name: FormPostValidator
+          RestApiId: !Ref ApiGatewayRestApi
+          ValidateRequestBody: true
+          ValidateRequestParameters: false
+
+    ApiGatewayMethodFormPost:
+        Type: AWS::ApiGateway::Method
+        Properties:
+          RequestModels:
+            application/json: !Ref ApiGatewayRestMethodModel
+          RequestValidatorId: !Ref ApiGatewayRequestValidator
+          
+    ApiGatewayGatewayResponseBadRequestBody:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseTemplates:
+          'application/json': '{ "ok": false, "message": "Message payload invalid" }'
+        ResponseType: BAD_REQUEST_BODY
+        RestApiId: !Ref ApiGatewayRestApi
+        StatusCode: 422
+        
+    ApiGatewayGatewayResponseResourceNotFound:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseTemplates:
+          'application/json': '{ "ok": false, "message": "Resource not found" }'
+        ResponseType: RESOURCE_NOT_FOUND
+        RestApiId: !Ref ApiGatewayRestApi
+        StatusCode: 404
+        
+    ApiGatewayGatewayResponseDefault5XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseTemplates:
+          'application/json': '{ "ok": false, "message": "Resource not supported" }'
+        ResponseType: DEFAULT_5XX
+        RestApiId: !Ref ApiGatewayRestApi
+        StatusCode: 500

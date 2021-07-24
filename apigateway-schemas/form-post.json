@@ -1,0 +1,21 @@
+{
+  "title": "FormPostSchema",
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "required": ["name", "email", "message"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9]+$"
+    },
+    "email": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9]+$"
+    },
+    "message": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9]+$"
+    }
+  }
+}
