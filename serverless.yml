@@ -1,4 +1,4 @@
-service: apigateway-sqs-dynamodb-html-form
+service: apigateway-sqs-dynamodb
 
 frameworkVersion: 2.52.1
 
@@ -55,10 +55,17 @@ functions:
           maximumBatchingWindow: 30
 
 resources:
+  extensions:
+    ApiGatewayMethodFormPost:
+        Properties:
+          RequestModels:
+            application/json: !Ref ApiGatewayRestMethodModel
+          RequestValidatorId: !Ref ApiGatewayRequestValidator
+
   Resources:
     SQSQueueFormPost:
       Type: 'AWS::SQS::Queue'
-    
+
     FormPostTable:
       Type: 'AWS::DynamoDB::Table'
       Properties:
@@ -71,7 +78,7 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-    
+
     ApiGatewayRestMethodModel:
         Type: AWS::ApiGateway::Model
         Properties:
@@ -79,7 +86,7 @@ resources:
           Description: "FormPostModel"
           RestApiId: !Ref ApiGatewayRestApi
           Schema: ${file(./apigateway-schemas/form-post.json)}
-    
+
     ApiGatewayRequestValidator:
         Type: AWS::ApiGateway::RequestValidator
         Properties:
@@ -88,13 +95,6 @@ resources:
           ValidateRequestBody: true
           ValidateRequestParameters: false
 
-    ApiGatewayMethodFormPost:
-        Type: AWS::ApiGateway::Method
-        Properties:
-          RequestModels:
-            application/json: !Ref ApiGatewayRestMethodModel
-          RequestValidatorId: !Ref ApiGatewayRequestValidator
-          
     GatewayResponseBadRequestBody:
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
@@ -105,8 +105,8 @@ resources:
           application/json: '{ "ok": false, "message": "Message payload invalid", "requestId": "$context.requestId" }'
         ResponseType: BAD_REQUEST_BODY
         RestApiId: !Ref ApiGatewayRestApi
-        StatusCode: 422
-        
+        StatusCode: '422'
+
     GatewayResponseUnsupportedMediaType:
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
@@ -117,4 +117,4 @@ resources:
           application/json: '{ "ok": false, "message": "Content-Type not supported", "requestId": "$context.requestId" }'
         ResponseType: UNSUPPORTED_MEDIA_TYPE
         RestApiId: !Ref ApiGatewayRestApi
-        StatusCode: 415
+        StatusCode: '415'
