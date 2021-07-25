@@ -47,11 +47,11 @@ custom:
 functions:
   SQSWorker:
     handler: ./handlers/sqs-worker.handler
-    reservedConcurrency: 10 # maximum number of lambdas to connect with downstream database
+    reservedConcurrency: 5 # maximum number of lambdas to connect with downstream database
     events:
       - sqs:
           arn: !GetAtt SQSQueueFormPost.Arn
-          batchSize: 5
+          batchSize: 10
           maximumBatchingWindow: 30
 
 resources:
