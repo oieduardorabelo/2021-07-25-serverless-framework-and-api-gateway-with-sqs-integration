@@ -12,6 +12,15 @@ provider:
   lambdaHashingVersion: 20201221
   stage: dev
   region: ap-southeast-2
+  logs:
+    restApi: true
+  environment:
+    FORM_POST_TABLE_NAME: !Ref FormPostTable
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:BatchWriteItem
+      Resource: !GetAtt FormPostTable.Arn
 
 custom:
   apiGatewayServiceProxies:
@@ -25,6 +34,9 @@ custom:
             application/json: |-
               #set ($body = $util.parseJson($input.body))
               Action=SendMessage##
+              &MessageAttribute.1.Name=$util.urlEncode("requestId")##
+              &MessageAttribute.1.Value.DataType=String##
+              &MessageAttribute.1.Value.StringValue=$util.urlEncode($context.requestId)##
               &MessageBody=$util.urlEncode($input.body)
         response:
           template:
@@ -35,11 +47,30 @@ custom:
 functions:
   SQSWorker:
     handler: ./handlers/sqs-worker.handler
+    reservedConcurrency: 10 # maximum number of lambdas to connect with downstream database
+    events:
+      - sqs:
+          arn: !GetAtt SQSQueueFormPost.Arn
+          batchSize: 5
+          maximumBatchingWindow: 30
 
 resources:
   Resources:
     SQSQueueFormPost:
       Type: 'AWS::SQS::Queue'
+    
+    FormPostTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: requestId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: requestId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
     
     ApiGatewayRestMethodModel:
         Type: AWS::ApiGateway::Model
